@@ -43,7 +43,7 @@ UserSchema.methods.toJSON = function (){
 UserSchema.methods.generateAuthToken = function () {
   var user = this; //cant use arrow functions with this, hence fun()
   var access = 'auth';
-  var token = jwt.sign({_id: user._id.toHexString(), access},'abc123').toString();
+  var token = jwt.sign({_id: user._id.toHexString(), access},process.env.JWT_SECRET).toString();
 
   user.tokens = user.tokens.concat([{access,token}]); //instead of user.tokens.push
   return user.save().then(() => {
@@ -51,12 +51,24 @@ UserSchema.methods.generateAuthToken = function () {
   });
 };
 
+UserSchema.methods.removeToken = function (token){
+  var user = this;
+
+  return user.update({
+    $pull: {
+      tokens:{
+        token: token
+      }
+    }
+  })
+}
+
 UserSchema.statics.findByToken = function(token){
   var User = this;
   var decoded;
 
   try{
-    decoded = jwt.verify(token, 'abc123');
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   }catch(e){
       return Promise.reject()
   }
